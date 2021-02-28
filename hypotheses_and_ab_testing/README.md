@@ -10,8 +10,10 @@
 1. Приоритезировать гипотезы с использованием фреймворков ICE и RICE.
 2. Проанализировать полученные результаты A/B-теста. Сделать заключение о необходимости завершения теста (зафиксировав победу одной из групп или отсутствие различий) либо о необходимости продолжения теста.
 
-## Используемые библиотеки 🛠️
+## Библиотеки 🛠️
 
 `Matplotlib` `Pandas` `Python` `Seaborn` `NumPy` `SciPy` `math`
 
-[Прямая ссылка на проект в Google Colab](https://drive.google.com/file/d/1M7gOxs9KTQbVWOa3Mqd4gotZAqi2kZOt/view?usp=sharing)
+<br>
+
+<a href="https://colab.research.google.com/github/dsibi/yandex_praktikum_da/blob/main/hypotheses_and_ab_testing/hypotheses_and_ab_testing%20.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
