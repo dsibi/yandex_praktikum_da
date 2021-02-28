@@ -1,0 +1,1527 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "celltoolbar": "Raw Cell Format",
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.7.6"
+    },
+    "colab": {
+      "name": "Копия блокнота \"sprint_1_project_debtors_analysis_comments.ipynb\"",
+      "provenance": [],
+      "include_colab_link": true
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/dsibi/yandex_praktikum_da/blob/main/assess_reliability_of_bank_borrowers/assess_reliability_of_bank_borrowers_ru\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Jl3sI_l0RDnu"
+      },
+      "source": [
+        "## Исследование надёжности заёмщиков\n",
+        "\n",
+        "Заказчик — кредитный отдел банка. Нужно разобраться, влияет ли семейное положение и количество детей клиента на факт погашения кредита в срок. Входные данные от банка — статистика о платёжеспособности клиентов.\n",
+        "\n",
+        "Результаты исследования будут учтены при построении модели **кредитного скоринга** — специальной системы, которая оценивает способность потенциального заёмщика вернуть кредит банку."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "OoGzNlHERDn1"
+      },
+      "source": [
+        "### Шаг 1. Откройте файл с данными и изучите общую информацию. "
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "6BRk4bfaRDn4"
+      },
+      "source": [
+        "Импортируем библиотекиу pandas для обработки и анализа табличных данных, а также библиотеку pymystem3 для проведения лемматизации"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "MxJ4zgJMRDn8"
+      },
+      "source": [
+        "import pandas as pd\n",
+        "from pymystem3 import Mystem\n",
+        "m = Mystem()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "aM1aWBpZRDoT"
+      },
+      "source": [
+        "Читаем и выводим на экран csv-файл"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "n6lMJDpCRDok",
+        "outputId": "f1ef56fe-7288-4152-ff6e-30fce65940b0"
+      },
+      "source": [
+        "df = pd.read_csv('data.csv')\n",
+        "df.info()\n",
+        "df.describe()"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "<class 'pandas.core.frame.DataFrame'>\n",
+            "RangeIndex: 21525 entries, 0 to 21524\n",
+            "Data columns (total 12 columns):\n",
+            "children            21525 non-null int64\n",
+            "days_employed       19351 non-null float64\n",
+            "dob_years           21525 non-null int64\n",
+            "education           21525 non-null object\n",
+            "education_id        21525 non-null int64\n",
+            "family_status       21525 non-null object\n",
+            "family_status_id    21525 non-null int64\n",
+            "gender              21525 non-null object\n",
+            "income_type         21525 non-null object\n",
+            "debt                21525 non-null int64\n",
+            "total_income        19351 non-null float64\n",
+            "purpose             21525 non-null object\n",
+            "dtypes: float64(2), int64(5), object(5)\n",
+            "memory usage: 2.0+ MB\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>children</th>\n",
+              "      <th>days_employed</th>\n",
+              "      <th>dob_years</th>\n",
+              "      <th>education_id</th>\n",
+              "      <th>family_status_id</th>\n",
+              "      <th>debt</th>\n",
+              "      <th>total_income</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>count</td>\n",
+              "      <td>21525.000000</td>\n",
+              "      <td>19351.000000</td>\n",
+              "      <td>21525.000000</td>\n",
+              "      <td>21525.000000</td>\n",
+              "      <td>21525.000000</td>\n",
+              "      <td>21525.000000</td>\n",
+              "      <td>1.935100e+04</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>mean</td>\n",
+              "      <td>0.538908</td>\n",
+              "      <td>63046.497661</td>\n",
+              "      <td>43.293380</td>\n",
+              "      <td>0.817236</td>\n",
+              "      <td>0.972544</td>\n",
+              "      <td>0.080883</td>\n",
+              "      <td>1.674223e+05</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>std</td>\n",
+              "      <td>1.381587</td>\n",
+              "      <td>140827.311974</td>\n",
+              "      <td>12.574584</td>\n",
+              "      <td>0.548138</td>\n",
+              "      <td>1.420324</td>\n",
+              "      <td>0.272661</td>\n",
+              "      <td>1.029716e+05</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>min</td>\n",
+              "      <td>-1.000000</td>\n",
+              "      <td>-18388.949901</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>2.066726e+04</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>25%</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>-2747.423625</td>\n",
+              "      <td>33.000000</td>\n",
+              "      <td>1.000000</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>1.030532e+05</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>50%</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>-1203.369529</td>\n",
+              "      <td>42.000000</td>\n",
+              "      <td>1.000000</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>1.450179e+05</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>75%</td>\n",
+              "      <td>1.000000</td>\n",
+              "      <td>-291.095954</td>\n",
+              "      <td>53.000000</td>\n",
+              "      <td>1.000000</td>\n",
+              "      <td>1.000000</td>\n",
+              "      <td>0.000000</td>\n",
+              "      <td>2.034351e+05</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>max</td>\n",
+              "      <td>20.000000</td>\n",
+              "      <td>401755.400475</td>\n",
+              "      <td>75.000000</td>\n",
+              "      <td>4.000000</td>\n",
+              "      <td>4.000000</td>\n",
+              "      <td>1.000000</td>\n",
+              "      <td>2.265604e+06</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "           children  days_employed     dob_years  education_id  \\\n",
+              "count  21525.000000   19351.000000  21525.000000  21525.000000   \n",
+              "mean       0.538908   63046.497661     43.293380      0.817236   \n",
+              "std        1.381587  140827.311974     12.574584      0.548138   \n",
+              "min       -1.000000  -18388.949901      0.000000      0.000000   \n",
+              "25%        0.000000   -2747.423625     33.000000      1.000000   \n",
+              "50%        0.000000   -1203.369529     42.000000      1.000000   \n",
+              "75%        1.000000    -291.095954     53.000000      1.000000   \n",
+              "max       20.000000  401755.400475     75.000000      4.000000   \n",
+              "\n",
+              "       family_status_id          debt  total_income  \n",
+              "count      21525.000000  21525.000000  1.935100e+04  \n",
+              "mean           0.972544      0.080883  1.674223e+05  \n",
+              "std            1.420324      0.272661  1.029716e+05  \n",
+              "min            0.000000      0.000000  2.066726e+04  \n",
+              "25%            0.000000      0.000000  1.030532e+05  \n",
+              "50%            0.000000      0.000000  1.450179e+05  \n",
+              "75%            1.000000      0.000000  2.034351e+05  \n",
+              "max            4.000000      1.000000  2.265604e+06  "
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 897
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "fuGUbm-SRDpi"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "wuagVYzBRDpl"
+      },
+      "source": [
+        "Файл открыли и изучли - он содержит таблицу, состоящую 21525 строк и 12 колонок:\n",
+        "- не все данные присутствуют в колонках:\n",
+        "    - `days_employed`\n",
+        "    - `total_income`\n",
+        "- колонки с некорректным типом данных:\n",
+        "    - `days_employed`\n",
+        "    - `total_income`\n",
+        "- явные ошибки в данных в колонках `children`, `days_employed`;\n",
+        "- ряд названий колонок нужно изменить."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "XlcLyGcARDps"
+      },
+      "source": [
+        "### Шаг 2. Предобработка данных"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "9whmTBboRDpv"
+      },
+      "source": [
+        "### Изменение названий столбцов и обработка пропусков"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "fnoTsvaKRDpz"
+      },
+      "source": [
+        "#### Изменение названий столбцов"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "ZtjmqMgHRDp2"
+      },
+      "source": [
+        "Выводим текущие названия столбцов"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "alzTpIjXRDp8",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 162
+        },
+        "outputId": "25b6cb9c-807e-4cf9-f3c6-2d87a8ec8be7"
+      },
+      "source": [
+        "df.columns"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "error",
+          "ename": "NameError",
+          "evalue": "ignored",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-1-b666bf274d0a>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcolumns\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m",
+            "\u001b[0;31mNameError\u001b[0m: name 'df' is not defined"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "D0A_a3fMRDqT"
+      },
+      "source": [
+        "Корректируем названия столбцов"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "scrolled": true,
+        "id": "hi-B4_5yRDqW",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 195
+        },
+        "outputId": "d18728dc-52da-4fde-c624-58b3ce07ddf7"
+      },
+      "source": [
+        "df.rename(columns={'children': 'children_number', 'dob_years': 'age_years', 'education': 'education_level', 'education_id': 'education_level_id', 'purpose': 'loan_purpose'}, inplace=True)\n",
+        "df.columns"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "error",
+          "ename": "NameError",
+          "evalue": "ignored",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mNameError\u001b[0m                                 Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-2-fa37753431a4>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m()\u001b[0m\n\u001b[0;32m----> 1\u001b[0;31m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mrename\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mcolumns\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;34m{\u001b[0m\u001b[0;34m'children'\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0;34m'children_number'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'dob_years'\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0;34m'age_years'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'education'\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0;34m'education_level'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'education_id'\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0;34m'education_level_id'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'purpose'\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0;34m'loan_purpose'\u001b[0m\u001b[0;34m}\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0minplace\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0;32mTrue\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      2\u001b[0m \u001b[0mdf\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcolumns\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mNameError\u001b[0m: name 'df' is not defined"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "OcxqJfPiRDqu"
+      },
+      "source": [
+        "#### Обработка пропусков"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "TxL0R2e0RDqz"
+      },
+      "source": [
+        "##### Считаем доли пропусков"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "nVj95kr5RDq3"
+      },
+      "source": [
+        "df.isna().mean()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "MvM8geCeRDrK"
+      },
+      "source": [
+        "Доля пропусков по следующим колонкам `days_employed` и `total_income` одинакова и равна 10 %.\n",
+        "Возможные причины появления пропусков - технические проблемы при выгрузке из разных баз данных."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "K8ahESZaRDr0"
+      },
+      "source": [
+        "##### Заполненияем пропуски"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "CuWZvqBKRDr4"
+      },
+      "source": [
+        "- `days_employed`: данные по этому столбцу не фигурируют в запросе Заказчика, поэтому пропуски заменяем нулями"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "dnuWFSGPRDr6"
+      },
+      "source": [
+        "df['days_employed']=df['days_employed'].fillna(0)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "nzbHhLuWRDsH"
+      },
+      "source": [
+        "- `total_income` заполним медианным значением в соответствии с типом занятости, для этого производим:"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Dt6ZexT-RDsJ"
+      },
+      "source": [
+        "    - расчет медианного значения по `income_type` и сохранение его в `med_table`"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "A4dXjLeLRDsL"
+      },
+      "source": [
+        "med_table=df.groupby('income_type')['total_income'].median()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "U-0SuTwjRDsW"
+      },
+      "source": [
+        "    - подставновку рассчитанного медианного значения в пропущенные ячейки"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "v7a4wDurRDsY"
+      },
+      "source": [
+        "for income_type in med_table.index:\n",
+        "    df.loc[(df['total_income'].isna()) & (df['income_type'] == income_type), 'total_income'] = med_table.loc[income_type]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "SOE8sPEaRDsi"
+      },
+      "source": [
+        "    - проверяем наличие пропусков"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "edZGcvFVRDsk"
+      },
+      "source": [
+        "df.info()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "PFbDlMS8RDsx"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Xi7_H2HIRDsz"
+      },
+      "source": [
+        "Скорректировали наименования полей таблицы и заполнили все пропуски в ее ячейках."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "UdYA81jJRDs5"
+      },
+      "source": [
+        "### Замена типа данных"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "JBSRfjXmRDs8"
+      },
+      "source": [
+        "Заменяем вещественный тип данных на целочисленный в столбцах `days_employed` и `total_income` и производим проверку изменений"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KibJmF6ERDs9",
+        "outputId": "970caceb-dcc7-4b31-f352-26c1947059bc"
+      },
+      "source": [
+        "for col in ['days_employed', 'total_income']:\n",
+        "    df[col]=df[col].astype('int')\n",
+        "df.dtypes"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "children_number        int64\n",
+              "days_employed          int64\n",
+              "age_years              int64\n",
+              "education_level       object\n",
+              "education_level_id     int64\n",
+              "family_status         object\n",
+              "family_status_id       int64\n",
+              "gender                object\n",
+              "income_type           object\n",
+              "debt                   int64\n",
+              "total_income           int64\n",
+              "loan_purpose          object\n",
+              "dtype: object"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 905
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "8yeGb9R_RDtE"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "ss-AIYniRDtF"
+      },
+      "source": [
+        "Тип данных изменен. Метод для их изменения был выбран в соответствии с начальным типом данных - float64."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "t1eM8t4iRDtG"
+      },
+      "source": [
+        "### Обработка дубликатов"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "agQt4FGHRDtH"
+      },
+      "source": [
+        "Для более эффективного поиска дубликатов приведем данные в таблице к нижнему регистру с применением конструкции try-except, чтобы исключить возможные ошибки отсутствия атрибута str.lower в колнках таблицы - AttributeError"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "bU0U7rS-RDtI"
+      },
+      "source": [
+        "for col in df.columns:\n",
+        "    try:\n",
+        "        df[col] = df[col].str.lower()\n",
+        "    except AttributeError:\n",
+        "        pass"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "KUHwE0jSRDtT"
+      },
+      "source": [
+        "Подсчитаем количество дубликатов в таблице"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Xi4asWuMRDtW",
+        "outputId": "6921e8df-1e01-437b-fc6d-b9a5e9f80a7d"
+      },
+      "source": [
+        "print('Дубликатов в таблице: ', df.duplicated().sum())"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Дубликатов в таблице:  71\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "L3OoxU7xRDtp"
+      },
+      "source": [
+        "Удаляем дубликаты с помощью метода `drop_duplicates`, оставляя первую строку из перечня дублей и производим проверку"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "BY5OEVvwRDtt",
+        "outputId": "81490ec2-502b-42c3-f99f-c114991ec008"
+      },
+      "source": [
+        "df=df.drop_duplicates()\n",
+        "print('Дубликатов в таблице: ', df.duplicated().sum())"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Дубликатов в таблице:  0\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "YPvGofkzRDt4"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "c-9ODDcxRDt7"
+      },
+      "source": [
+        "Из таблицы удален 71 дубликат.\n",
+        "Возможные причины появления дубликатов - технические проблемы при выгрузке из разных баз данных."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "OViqF-17RDt_"
+      },
+      "source": [
+        "### Лемматизация"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "FasCL11zRDuB"
+      },
+      "source": [
+        "Создаем функцию для лемматизация текста"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "IoWO_H6hRDuD"
+      },
+      "source": [
+        "def lemmatization (loan_purpose):\n",
+        "    lemmas = ' '.join(m.lemmatize(loan_purpose))\n",
+        "    if 'автомобиль' in lemmas:\n",
+        "        return 'покупка автомобиля'\n",
+        "    elif ('недвижимость' in lemmas) or ('жилье' in lemmas):\n",
+        "        return 'покупка недвижимости'\n",
+        "    elif 'свадьба' in lemmas:\n",
+        "        return 'свадьба'\n",
+        "    elif 'образование' in lemmas:\n",
+        "        return 'образование'\n",
+        "    else:\n",
+        "        return 'другая категория'"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "SZGKupyKRDuK"
+      },
+      "source": [
+        "Применяем созданную функцию к колонке `loan_purpose` и добавляем колонку с леммами - `loan_purpose_dict`"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "-ya_X1yMRDuM"
+      },
+      "source": [
+        "df['loan_purpose_dict']=df['loan_purpose'].apply(lemmatization)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "S_7plzczRDuU"
+      },
+      "source": [
+        "Выводим перечень целей получения кредита, отсортированный по убыванию"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "mot1vkS7RDuW",
+        "outputId": "e86a0d9e-8ec6-4515-cfb3-5136b36f2265"
+      },
+      "source": [
+        "loan_purposes=df.groupby('loan_purpose_dict')['loan_purpose_dict'].count()\n",
+        "print(loan_purposes.sort_values(ascending = False))"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "loan_purpose_dict\n",
+            "покупка недвижимости    10811\n",
+            "покупка автомобиля       4306\n",
+            "образование              4013\n",
+            "свадьба                  2324\n",
+            "Name: loan_purpose_dict, dtype: int64\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "UEUGm5V_RDuk"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "ksegoz5IRDum"
+      },
+      "source": [
+        "Метод лемматизации определил, что около 50 % клиентов берут кредит на приобретение недвижимости."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "vhNwkyoVRDuw"
+      },
+      "source": [
+        "### Категоризация данных"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "IUlMGdIMRDuz"
+      },
+      "source": [
+        "При работе с набором данных были созданы и использованы следующие «словари»:\n",
+        "- `columns` - для переименования названий колонок;\n",
+        "- `med_table` - для подставновки рассчитанного медианного значения в пропущенные ячейки колонки `total_income`;\n",
+        "- `{-1 : 1, 20 : 2}` - для корректировки значений в колонке `children_number`."
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "g52y2n8_RDu7",
+        "outputId": "c74bfdf2-bda4-468c-a6d5-36ecf76aea86"
+      },
+      "source": [
+        "df['children_number'] = df['children_number'].replace({-1 : 1, 20 : 2})\n",
+        "df.children_number.value_counts()"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "0    14091\n",
+              "1     4855\n",
+              "2     2128\n",
+              "3      330\n",
+              "4       41\n",
+              "5        9\n",
+              "Name: children_number, dtype: int64"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 912
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "tqzmAeYVRDvR"
+      },
+      "source": [
+        "### Шаг 3. Ответьте на вопросы"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "6uM5nbSCRDvU"
+      },
+      "source": [
+        "- Есть ли зависимость между наличием детей и возвратом кредита в срок?"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "xWuKiB9kRDvW",
+        "outputId": "1327c4c3-3a0d-4207-e0ac-8fa62c0795da"
+      },
+      "source": [
+        "children_debt=df.pivot_table(index='children_number',values='debt',aggfunc=['count','sum'])\n",
+        "children_debt['%']=round((children_debt[('sum', 'debt')]/children_debt[('count', 'debt')])*100,2)\n",
+        "children_debt.columns = ['Общее количество заемщиков','Количество просрочников','%']\n",
+        "children_debt"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Общее количество заемщиков</th>\n",
+              "      <th>Количество просрочников</th>\n",
+              "      <th>%</th>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>children_number</th>\n",
+              "      <th></th>\n",
+              "      <th></th>\n",
+              "      <th></th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>0</td>\n",
+              "      <td>14091</td>\n",
+              "      <td>1063</td>\n",
+              "      <td>7.54</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>1</td>\n",
+              "      <td>4855</td>\n",
+              "      <td>445</td>\n",
+              "      <td>9.17</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>2</td>\n",
+              "      <td>2128</td>\n",
+              "      <td>202</td>\n",
+              "      <td>9.49</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>3</td>\n",
+              "      <td>330</td>\n",
+              "      <td>27</td>\n",
+              "      <td>8.18</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>4</td>\n",
+              "      <td>41</td>\n",
+              "      <td>4</td>\n",
+              "      <td>9.76</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>5</td>\n",
+              "      <td>9</td>\n",
+              "      <td>0</td>\n",
+              "      <td>0.00</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "                 Общее количество заемщиков  Количество просрочников     %\n",
+              "children_number                                                           \n",
+              "0                                     14091                     1063  7.54\n",
+              "1                                      4855                      445  9.17\n",
+              "2                                      2128                      202  9.49\n",
+              "3                                       330                       27  8.18\n",
+              "4                                        41                        4  9.76\n",
+              "5                                         9                        0  0.00"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 918
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "djgzqEtPRDvl"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "CXOlbk94RDvn"
+      },
+      "source": [
+        "Несмотря на максимальное количество клиентов с просроченными кредитами у которых нет детей, доля их в сравнении с иными категориями клиентов меньшая и составляет 7,54 %, в то время как доли просроченных кредитов у клиентов имеющих от 1 до 4 детей - от 8,18 % до 9,76 %. В силу малого количества попавших в выборку клиентов с 5-ю детьми, данные по ним можно нивелировать."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "naY1TysXRDvt"
+      },
+      "source": [
+        "- Есть ли зависимость между семейным положением и возвратом кредита в срок?"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "scrolled": true,
+        "id": "T2LxtUqkRDvw",
+        "outputId": "331bba4f-e040-4ad9-89e7-d0a37546c96a"
+      },
+      "source": [
+        "family_status_debt=df.pivot_table(index='family_status', values='debt',aggfunc=['count','sum'])\n",
+        "family_status_debt['%']=round((family_status_debt[('sum', 'debt')]/family_status_debt[('count', 'debt')])*100,2)\n",
+        "family_status_debt.columns = ['Общее количество заемщиков','Количество просрочников','%']\n",
+        "family_status_debt.sort_values(by = '%', ascending = False)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Общее количество заемщиков</th>\n",
+              "      <th>Количество просрочников</th>\n",
+              "      <th>%</th>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>family_status</th>\n",
+              "      <th></th>\n",
+              "      <th></th>\n",
+              "      <th></th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>не женат / не замужем</td>\n",
+              "      <td>2810</td>\n",
+              "      <td>274</td>\n",
+              "      <td>9.75</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>гражданский брак</td>\n",
+              "      <td>4151</td>\n",
+              "      <td>388</td>\n",
+              "      <td>9.35</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>женат / замужем</td>\n",
+              "      <td>12339</td>\n",
+              "      <td>931</td>\n",
+              "      <td>7.55</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>в разводе</td>\n",
+              "      <td>1195</td>\n",
+              "      <td>85</td>\n",
+              "      <td>7.11</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>вдовец / вдова</td>\n",
+              "      <td>959</td>\n",
+              "      <td>63</td>\n",
+              "      <td>6.57</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "                       Общее количество заемщиков  Количество просрочников  \\\n",
+              "family_status                                                                \n",
+              "не женат / не замужем                        2810                      274   \n",
+              "гражданский брак                             4151                      388   \n",
+              "женат / замужем                             12339                      931   \n",
+              "в разводе                                    1195                       85   \n",
+              "вдовец / вдова                                959                       63   \n",
+              "\n",
+              "                          %  \n",
+              "family_status                \n",
+              "не женат / не замужем  9.75  \n",
+              "гражданский брак       9.35  \n",
+              "женат / замужем        7.55  \n",
+              "в разводе              7.11  \n",
+              "вдовец / вдова         6.57  "
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 914
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "4OLIQtvnRDv9"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "bwBcGhH7RDwA"
+      },
+      "source": [
+        "В большей степени просрочку допускают заемщики, не обремененные семейными узами - 9,75 % от общего количества всех не женатых / не замужних, но также недалеко отстают от них лица, живущие в гражданском браке - 9,35 % от общего числа состоящих в гражданском браке."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "w8KzQuuyRDwG"
+      },
+      "source": [
+        "- Есть ли зависимость между уровнем дохода и возвратом кредита в срок?"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "T013cLA_RDwL",
+        "outputId": "7bfd4508-8094-4c9e-c935-df7c6f4cf1a7"
+      },
+      "source": [
+        "import numpy as np\n",
+        "total_income_debt=pd.DataFrame(df, columns=['total_income', 'debt'])\n",
+        "total_income_debt['income_groups'] = pd.cut(total_income_debt['total_income'],[0,50000,100000,150000,200000,np.inf],labels=[\"до 50 тыс. руб.\", \"50-100 тыс. руб.\", \"100-150 тыс. руб.\",\"150-200 тыс. руб.\",\"свыше 200 тыс. руб.\"])\n",
+        "total_income_debt=total_income_debt.groupby('income_groups')['debt'].agg(['count','sum'])\n",
+        "total_income_debt['%']=round((total_income_debt[('sum')]/total_income_debt[('count')])*100,2)\n",
+        "total_income_debt.columns = ['Общее количество заемщиков','Количество просрочников','%']\n",
+        "total_income_debt"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Общее количество заемщиков</th>\n",
+              "      <th>Количество просрочников</th>\n",
+              "      <th>%</th>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>income_groups</th>\n",
+              "      <th></th>\n",
+              "      <th></th>\n",
+              "      <th></th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>до 50 тыс. руб.</td>\n",
+              "      <td>372</td>\n",
+              "      <td>23</td>\n",
+              "      <td>6.18</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>50-100 тыс. руб.</td>\n",
+              "      <td>4091</td>\n",
+              "      <td>331</td>\n",
+              "      <td>8.09</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>100-150 тыс. руб.</td>\n",
+              "      <td>7160</td>\n",
+              "      <td>624</td>\n",
+              "      <td>8.72</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>150-200 тыс. руб.</td>\n",
+              "      <td>4764</td>\n",
+              "      <td>405</td>\n",
+              "      <td>8.50</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>свыше 200 тыс. руб.</td>\n",
+              "      <td>5067</td>\n",
+              "      <td>358</td>\n",
+              "      <td>7.07</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "                     Общее количество заемщиков  Количество просрочников     %\n",
+              "income_groups                                                                 \n",
+              "до 50 тыс. руб.                             372                       23  6.18\n",
+              "50-100 тыс. руб.                           4091                      331  8.09\n",
+              "100-150 тыс. руб.                          7160                      624  8.72\n",
+              "150-200 тыс. руб.                          4764                      405  8.50\n",
+              "свыше 200 тыс. руб.                        5067                      358  7.07"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 915
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "tURJEqutRDwZ"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "tkM3SjI6RDwc"
+      },
+      "source": [
+        "Прямая зависимость между уровнем дохода и наличием просроченной задолженности не наблюдается и незначительно колеблется в диапазоне от 6,18 % до 8,7 %."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "nvo_xrcYRDwn"
+      },
+      "source": [
+        "- Как разные цели кредита влияют на его возврат в срок?"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "mx0nm5T1RDwp",
+        "outputId": "9464708e-7933-496b-8271-92324b60a5c2"
+      },
+      "source": [
+        "loan_purpose_debt=pd.DataFrame(df, columns=['loan_purpose_dict', 'debt'])\n",
+        "loan_purpose_debt_gr=loan_purpose_debt.groupby('loan_purpose_dict')['debt'].agg(['count','sum'])\n",
+        "loan_purpose_debt_gr['%']=round((loan_purpose_debt_gr[('sum')]/loan_purpose_debt_gr[('count')])*100,2)\n",
+        "loan_purpose_debt_gr.columns = ['Общее количество заемщиков','Количество просрочников','%']\n",
+        "loan_purpose_debt_gr.sort_values(by='%',ascending = False)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>Общее количество заемщиков</th>\n",
+              "      <th>Количество просрочников</th>\n",
+              "      <th>%</th>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>loan_purpose_dict</th>\n",
+              "      <th></th>\n",
+              "      <th></th>\n",
+              "      <th></th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <td>покупка автомобиля</td>\n",
+              "      <td>4306</td>\n",
+              "      <td>403</td>\n",
+              "      <td>9.36</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>образование</td>\n",
+              "      <td>4013</td>\n",
+              "      <td>370</td>\n",
+              "      <td>9.22</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>свадьба</td>\n",
+              "      <td>2324</td>\n",
+              "      <td>186</td>\n",
+              "      <td>8.00</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <td>покупка недвижимости</td>\n",
+              "      <td>10811</td>\n",
+              "      <td>782</td>\n",
+              "      <td>7.23</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "                      Общее количество заемщиков  Количество просрочников  \\\n",
+              "loan_purpose_dict                                                           \n",
+              "покупка автомобиля                          4306                      403   \n",
+              "образование                                 4013                      370   \n",
+              "свадьба                                     2324                      186   \n",
+              "покупка недвижимости                       10811                      782   \n",
+              "\n",
+              "                         %  \n",
+              "loan_purpose_dict           \n",
+              "покупка автомобиля    9.36  \n",
+              "образование           9.22  \n",
+              "свадьба               8.00  \n",
+              "покупка недвижимости  7.23  "
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 916
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "yYjRDqYYRDw8"
+      },
+      "source": [
+        "### Вывод"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "PS1MSffNRDxD"
+      },
+      "source": [
+        "Максимальный процент просрочки по выданным кредитам наблюдается по автокредитам и составляет 9,36 %, минимальный же по ипотеке – 7,23 %."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "a043ZqNmRDxI"
+      },
+      "source": [
+        "### Шаг 4. Общий вывод"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HYM_qfWGRDxK",
+        "outputId": "f40173dd-0123-4e06-f626-18c69b1376c8"
+      },
+      "source": [
+        "print(\"Средняя просрочка по кредитному портфелю: %.2f\" % ((df['debt'].sum()/len(df)*100)), '%')"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Средняя просрочка по кредитному портфелю: 8.12 %\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "9WTQoa2ERDxf"
+      },
+      "source": [
+        "В целях снижения уровня просроченных кредитов рекомендуем Заказчику пересмотреть скоринговую политику в отношении следующих групп клиентов:\n",
+        "- клиентов с детьми;\n",
+        "- не женатых/холостых, а также клиентов, проживающих в гражданском браке;\n",
+        "- клиентов, подающих заявку на автокредитование."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "XRgNRhZpRDxk"
+      },
+      "source": [
+        "### Чек-лист готовности проекта\n",
+        "\n",
+        "Поставьте 'x' в выполненных пунктах. Далее нажмите Shift+Enter."
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "BNL_SI5iRDxq"
+      },
+      "source": [
+        "- [x]  открыт файл;\n",
+        "- [x]  файл изучен;\n",
+        "- [x]  определены пропущенные значения;\n",
+        "- [x]  заполнены пропущенные значения;\n",
+        "- [x]  есть пояснение, какие пропущенные значения обнаружены;\n",
+        "- [x]  описаны возможные причины появления пропусков в данных;\n",
+        "- [x]  объяснено, по какому принципу заполнены пропуски;\n",
+        "- [x]  заменен вещественный тип данных на целочисленный;\n",
+        "- [x]  есть пояснение, какой метод используется для изменения типа данных и почему;\n",
+        "- [x]  удалены дубликаты;\n",
+        "- [x]  есть пояснение, какой метод используется для поиска и удаления дубликатов;\n",
+        "- [x]  описаны возможные причины появления дубликатов в данных;\n",
+        "- [x]  выделены леммы в значениях столбца с целями получения кредита;\n",
+        "- [x]  описан процесс лемматизации;\n",
+        "- [x]  данные категоризированы;\n",
+        "- [x]  есть объяснение принципа категоризации данных;\n",
+        "- [x]  есть ответ на вопрос: \"Есть ли зависимость между наличием детей и возвратом кредита в срок?\";\n",
+        "- [x]  есть ответ на вопрос: \"Есть ли зависимость между семейным положением и возвратом кредита в срок?\";\n",
+        "- [x]  есть ответ на вопрос: \"Есть ли зависимость между уровнем дохода и возвратом кредита в срок?\";\n",
+        "- [x]  есть ответ на вопрос: \"Как разные цели кредита влияют на его возврат в срок?\";\n",
+        "- [x]  в каждом этапе есть выводы;\n",
+        "- [x]  есть общий вывод."
+      ]
+    }
+  ]
+}
