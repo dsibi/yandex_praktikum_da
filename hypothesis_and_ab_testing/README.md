@@ -15,5 +15,3 @@
 `Matplotlib` `Pandas` `Python` `Seaborn` `NumPy` `SciPy` `math`
 
 <br>
-
-<a href="https://colab.research.google.com/github/dsibi/yandex_praktikum_da/blob/main/hypotheses_and_ab_testing/hypotheses_and_ab_testing%20.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
