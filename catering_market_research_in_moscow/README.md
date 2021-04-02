@@ -13,3 +13,5 @@
 `Pandas` `Seaborn` `Matplotlib` `Numpy` `re` `Requests` `io` `Яндекс.Геокодер` `API`
 
 <br>
+
+[Презентация](https://docs.google.com/presentation/d/1mtLknPq7vTkbE60C0Bt3LP5bXq0PPVGO_trReLJ0P2U/edit?usp=sharing)
