@@ -17,3 +17,6 @@
 ## Библиотеки 🛠️
 
 `Pandas` `Seaborn` `Matplotlib` `Numpy` `sklearn` `SciPy`
+<br>
+
+<a href="https://colab.research.google.com/github/dsibi/yandex_praktikum_da/blob/main/ml_customer_churn/customer_churn.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
