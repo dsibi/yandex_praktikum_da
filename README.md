@@ -25,4 +25,6 @@
   
 [E-mail](mailto:dasibirin@gmail.com) 🔹 [Telegram](https://t.me/amid_si) 🔹 [Twitter](https://twitter.com/amid_si)
 
+![Diploma](https://drive.google.com/uc?export=view&id=1tFv6hM0jwUZlhKNiAZD-P7JuHNaPhx6D)
+
 </span>
